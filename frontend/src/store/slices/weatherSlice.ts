@@ -1,57 +1,58 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { WeatherState } from "../../types/weather";
-import { weatherAPi } from "../../api/services/weather";
-import { RootState } from "../store";
+import { weatherApi } from "../../api/services/weather";
 
 
+interface WeatherState {
+  weather: {
+    temperature: number;
+    feels_like: number;
+    humidity: number;
+    wind_speed: number;
+    condition: string;
+    icon: string;
+  } | null;
+  loading: boolean;
+  error: string | null;
+}
 
 const initialState: WeatherState = {
-    weather: null,
-    loading: false,
-    error: null,
-    selectedCity: null
+  weather: null,
+  loading: false,
+  error: null,
+};
 
-}
+// Async thunk to fetch weather
 export const fetchCapitalCityWeather = createAsyncThunk(
-    'weather/fetchcapitalcityweather',
-    async (capitalCity: string, { rejectWithValue }) => {
+  "weather/fetchCapitalCityWeather",
+  async (city: string, thunkAPI) => {
     try {
-        const response = await weatherAPi.getWeatherByCity(capitalCity);
-        return response;
+      const data = await weatherApi.getWeatherByCity(city);
+      return data;
     } catch (error: any) {
-        return rejectWithValue(error.message);
+      return thunkAPI.rejectWithValue(error.message || "Failed to fetch weather");
     }
-})
+  }
+);
 
-export const weatherSlice = createSlice({
-    name: 'weather',
-    initialState,
-    reducers: {
-        clearSelectedWeather: (state) => {
-            state.weather = null;
-            state.error = null;
-        }
-    },
-    extraReducers: (builder) => {
-        builder.addCase(fetchCapitalCityWeather.pending, (state) => {
-            state.loading = true;
-        })
-        .addCase(fetchCapitalCityWeather.fulfilled, (state, action) => {
-            state.loading = false;
-            state.weather = action.payload;
-        })
+const weatherSlice = createSlice({
+  name: "weather",
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCapitalCityWeather.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCapitalCityWeather.fulfilled, (state, action) => {
+        state.loading = false;
+        state.weather = action.payload;
+      })
+      .addCase(fetchCapitalCityWeather.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+  },
+});
 
-       .addCase(fetchCapitalCityWeather.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.payload as string
-        })
-    }
-    
-})
-
-export const selectWeather = (state: RootState) => state.weather.weather;
-export const selectWeatherLoading = (state: RootState) => state.weather.loading;
-export const selectWeatherError = (state: RootState) => state.weather.error;
-
-export const { clearSelectedWeather } = weatherSlice.actions;
 export default weatherSlice.reducer;
